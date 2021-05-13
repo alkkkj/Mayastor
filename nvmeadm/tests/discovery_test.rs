@@ -10,10 +10,7 @@ use std::{
     time::Duration,
 };
 
-static CONFIG_TEXT: &str = "sync_disable: true
-base_bdevs:
-  - uri: \"malloc:///Malloc0?size_mb=64&blk_size=4096&uuid=dbe4d7eb-118a-4d15-b789-a18d9af6ff29\"
-nexus_opts:
+static CONFIG_TEXT: &str = "nexus_opts:
   nvmf_nexus_port: 4422
   nvmf_replica_port: NVMF_PORT
   iscsi_enable: false
@@ -23,13 +20,11 @@ nvmf_tcp_tgt_conf:
 iscsi_tgt_conf:
   max_sessions: 1
   max_connections_per_session: 1
-implicit_share_base: true
 ";
 
 const CONFIG_FILE: &str = "/tmp/nvmeadm_nvmf_target.yaml";
 
-const SERVED_DISK_NQN: &str =
-    "nqn.2019-05.io.openebs:dbe4d7eb-118a-4d15-b789-a18d9af6ff29";
+const SERVED_DISK_NQN: &str = "nqn.2019-05.io.openebs:m0";
 
 const TARGET_PORT: u32 = 9523;
 
@@ -100,6 +95,32 @@ impl NvmfTarget {
             .expect("Failed to start spdk!");
 
         wait_for_mayastor_ready(TARGET_PORT).expect("mayastor not ready");
+
+        // create a base bdev
+        let output = Command::new("../target/debug/mayastor-client")
+            .arg("bdev")
+            .arg("create")
+            .arg("malloc:///m0?size_mb=64&blk_size=4096&uuid=dbe4d7eb-118a-4d15-b789-a18d9af6ff29")
+            .output();
+
+        if let Ok(result) = output {
+            if result.status.success() {
+                // share bdev over nvmf
+                let output = Command::new("../target/debug/mayastor-client")
+                    .arg("bdev")
+                    .arg("share")
+                    .arg("-p")
+                    .arg("nvmf")
+                    .arg("m0")
+                    .output();
+
+                if let Ok(result) = output {
+                    if result.status.success() {
+                        // bdev should be shared over nvmf
+                    }
+                }
+            }
+        }
 
         let _ = DiscoveryBuilder::default()
             .transport("tcp".to_string())
