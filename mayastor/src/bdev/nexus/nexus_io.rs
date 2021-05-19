@@ -33,6 +33,7 @@ use crate::{
         IoType,
         Mthread,
         NvmeCommandStatus,
+        Reactor,
         Reactors,
     },
 };
@@ -565,6 +566,11 @@ impl NexusBio {
     }
 
     fn do_retire(&self, child: String) {
+        //        let nexus = self.nexus_as_ref().name.clone();
+        //        Mthread::get_init().msg((), move |_| {
+        //            let _ = Reactor::block_on(Self::child_retire(nexus,
+        // child));        });
+
         Reactors::master().send_future(Self::child_retire(
             self.nexus_as_ref().name.clone(),
             child,
@@ -638,8 +644,6 @@ impl NexusBio {
                             nexus.pause().await.unwrap();
                             nexus.set_failfast().await.unwrap();
                             nexus.reconfigure(DrEvent::ChildFault).await;
-
-                            // Lookup child once more and finally remove it.
                             match nexus.child_lookup(&device) {
                                 Some(child) => {
                                     // TODO: an error can occur here if a
@@ -660,6 +664,7 @@ impl NexusBio {
                                     );
                                 }
                             }
+                            // Lookup child once more and finally remove it.
 
                             nexus.clear_failfast().await.unwrap();
                             nexus.resume().await.unwrap();

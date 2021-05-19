@@ -137,7 +137,7 @@ async def test_multiple(create_pool_on_all_nodes,
 
     devs = []
 
-    for i in range(5):
+    for i in range(15):
         uuid = guid.uuid4()
         ms1.nexus_create(uuid, 60 * 1024 * 1024,
                          [rlist_m2.pop().uri, rlist_m3.pop().uri])

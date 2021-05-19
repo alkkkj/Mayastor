@@ -377,7 +377,7 @@ impl<'a> NvmeController<'a> {
         let controller = NVME_CONTROLLERS
             .lookup_by_name(&ctx.name)
             .expect("Controller disappeared while being shutdown");
-        let mut controller = controller.lock().expect("lock poisoned");
+        let mut controller = controller.lock();
 
         // In case I/O channels didn't shutdown successfully, mark
         // the controller as Faulted.
@@ -393,11 +393,11 @@ impl<'a> NvmeController<'a> {
         // Reset the controller to complete all remaining I/O requests after all
         // I/O channels are closed.
         // TODO: fail the controller via spdk_nvme_ctrlr_fail() upon shutdown ?
-        debug!("{} resetting NVMe controller", ctx.name);
-        let rc = unsafe { spdk_nvme_ctrlr_reset(controller.ctrlr_as_ptr()) };
-        if rc != 0 {
-            error!("{} failed to reset controller, rc = {}", ctx.name, rc);
-        }
+        //debug!("{} resetting NVMe controller", ctx.name);
+        //let rc = unsafe { spdk_nvme_ctrlr_reset(controller.ctrlr_as_ptr()) };
+        //if rc != 0 {
+        //    error!("{} failed to reset controller, rc = {}", ctx.name, rc);
+        //}
 
         // Finalize controller shutdown and invoke callback.
         controller.clear_namespaces();
@@ -529,7 +529,7 @@ impl<'a> NvmeController<'a> {
         // in progress.
         let c = NVME_CONTROLLERS.lookup_by_name(reset_ctx.name);
         if let Some(controller) = c {
-            let mut controller = controller.lock().expect("lock poisoned");
+            let mut controller = controller.lock();
 
             // If controller exists, its state must reflect active reset
             // operation, as no other operations are allowed upon
@@ -767,7 +767,7 @@ extern "C" fn aer_cb(ctx: *mut c_void, cpl: *const spdk_nvme_cpl) {
 
         match NVME_CONTROLLERS.lookup_by_name(cid.to_string()) {
             Some(c) => {
-                let mut ctrlr = c.lock().expect("lock poisoned");
+                let mut ctrlr = c.lock();
                 info!(
                     "{}: populating namespaces in response to AER",
                     ctrlr.get_name()
@@ -820,7 +820,7 @@ pub(crate) async fn destroy_device(name: String) -> Result<(), NexusBdevError> {
     // of the controller.
     let (s, r) = oneshot::channel::<bool>();
     {
-        let mut controller = carc.lock().expect("lock poisoned");
+        let mut controller = carc.lock();
 
         fn _shutdown_callback(success: bool, ctx: *mut c_void) {
             done_cb(ctx, success);
@@ -855,7 +855,7 @@ pub(crate) async fn destroy_device(name: String) -> Result<(), NexusBdevError> {
 
     // Notify the listeners.
     debug!(?name, "notifying listeners about device removal");
-    let controller = carc.lock().unwrap();
+    let controller = carc.lock();
     let num_listeners = controller.notify_event(DeviceEventType::DeviceRemoved);
     debug!(
         ?name,
@@ -882,7 +882,7 @@ pub(crate) fn connected_attached_cb(
 
     // clone it now such that we can lock the original, and insert it later.
     let ctl = Arc::clone(&controller);
-    let mut controller = controller.lock().unwrap();
+    let mut controller = controller.lock();
     controller
         .state_machine
         .transition(Initializing)

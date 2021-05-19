@@ -3,18 +3,18 @@
 //! This file handles the conversion from URI to NVMe controller creation(s).
 //! It's not very clean, but also the least important for now.
 
+use async_trait::async_trait;
+use futures::channel::{oneshot, oneshot::Sender};
+use nix::errno::Errno;
+use parking_lot::Mutex;
+use snafu::ResultExt;
 use std::{
     collections::HashMap,
     convert::{From, TryFrom},
     ffi::c_void,
     ptr::NonNull,
-    sync::{Arc, Mutex},
+    sync::Arc,
 };
-
-use async_trait::async_trait;
-use futures::channel::{oneshot, oneshot::Sender};
-use nix::errno::Errno;
-use snafu::ResultExt;
 use tracing::instrument;
 use url::Url;
 
@@ -296,8 +296,7 @@ impl CreateDestroy for NvmfDeviceTemplate {
                     .lookup_by_name(&cname)
                     .expect("no controller in the list");
 
-                let controller =
-                    controller.lock().expect("failed to lock controller");
+                let controller = controller.lock();
 
                 // Successfully attached controllers must be in Running state.
                 assert_eq!(

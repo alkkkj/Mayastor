@@ -435,7 +435,7 @@ impl NvmeControllerIoChannel {
         };
 
         let (cname, controller, block_size) = {
-            let controller = carc.lock().expect("lock error");
+            let controller = carc.lock();
             // Make sure controller is available.
             if controller.get_state() != NvmeControllerState::Running {
                 error!(
